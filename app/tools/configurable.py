@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.mcp.context import context_from_run_manager
+from app.tools.context import context_from_run_manager
 
 
 def ids_from_run_manager(run_manager, *, default_user: str = "local", default_session: str = "demo") -> tuple[str, str]:

@@ -4,8 +4,8 @@ import json
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.workspace.io import read_text_file
 from app.workspace.manager import WorkspaceError
 
@@ -34,7 +34,7 @@ def handle_read(args: dict, ctx: ToolContext) -> ToolCallResult:
     return ToolCallResult(text=result.text)
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="read",
     description="Read a text file from the session workspace (data/, outputs/, compose/, or skills/).",
     input_schema=pydantic_input_schema(ReadArgs),

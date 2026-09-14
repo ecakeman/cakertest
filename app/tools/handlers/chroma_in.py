@@ -5,8 +5,8 @@ import uuid
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.mempalace.chroma_store import add
 
 
@@ -36,10 +36,10 @@ def handle_chroma_in(args: dict, ctx: ToolContext) -> ToolCallResult:
     )
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="chroma_in",
     description=(
-        "Stores text in the user's long-term vector memory (Chroma). "
+        "Stores text in the user's long-term vector memory (PostgreSQL + pgvector). "
         "Use when the user explicitly asks to remember something for later sessions."
     ),
     input_schema=pydantic_input_schema(ChromaInArgs),

@@ -6,8 +6,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 
 
 class GetCurrentTimeArgs(BaseModel):
@@ -37,7 +37,7 @@ def handle_get_current_time(args: dict, ctx: ToolContext) -> ToolCallResult:
     )
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="get_current_time",
     description="Return current date and time in the given IANA timezone.",
     input_schema=pydantic_input_schema(GetCurrentTimeArgs),

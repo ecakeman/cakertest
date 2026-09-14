@@ -55,8 +55,8 @@ def test_put_normalizes_path(tmp_path, monkeypatch):
 
 def test_get_matches_agent_write(tmp_path, monkeypatch):
     monkeypatch.setattr(manager, "root", tmp_path)
-    from app.mcp.registry import registry
-    from app.mcp.types import ToolContext
+    from app.tools.registry import registry
+    from app.tools.types import ToolContext
 
     uid, sid = "u1", "s1"
     manager.session_dir(uid, sid)

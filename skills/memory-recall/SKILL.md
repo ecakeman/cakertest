@@ -1,6 +1,6 @@
 ---
 name: memory-recall
-description: Searches long-term vector memory (Chroma) for facts the user asked to remember earlier. Use when the user asks what was saved or refers to past remembered information.
+description: Searches long-term vector memory (PostgreSQL + pgvector) for facts the user asked to remember earlier. Use when the user asks what was saved or refers to past remembered information.
 allowed-tools: chroma_out call_skill read
 ---
 

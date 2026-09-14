@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 import httpx
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.workspace.manager import WorkspaceError
 from app.workspace.paths import resolve_write_path
 
@@ -77,7 +77,7 @@ def handle_download(args: dict, ctx: ToolContext) -> ToolCallResult:
     )
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="download",
     description="Download a file from HTTP(S) into data/ or outputs/ (size limit 10MB).",
     input_schema=pydantic_input_schema(DownloadArgs),

@@ -4,8 +4,8 @@ import json
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.workspace.io import write_text_file
 from app.workspace.manager import WorkspaceError
 
@@ -39,7 +39,7 @@ def handle_write(args: dict, ctx: ToolContext) -> ToolCallResult:
     )
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="write",
     description=(
         "Create or overwrite a file under data/, outputs/, or compose/ in the session workspace."

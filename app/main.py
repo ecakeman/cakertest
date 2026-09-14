@@ -3,18 +3,18 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.api.admin import router as admin_router
 from app.api.chat import router as chat_router
 from app.api.terminal import router as terminal_router
 from app.api.web_data import router as web_data_router
-from app.mcp.api import router as mcp_router
+from app.config import settings
 from app.execution.cleanup import cleanup_orphan_containers
+from app.mempalace import chroma_store
 from app.runtime.graph import compile_graph
 from app.web_store.store import store
 
-DB_PATH = Path("var/state.db")
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 
@@ -24,7 +24,8 @@ async def lifespan(app: FastAPI):
     store.ensure_dirs()
     store.ensure_default_user()
     cleanup_orphan_containers()
-    async with AsyncSqliteSaver.from_conn_string(str(DB_PATH)) as checkpointer:
+    chroma_store.setup()
+    async with AsyncPostgresSaver.from_conn_string(settings.pg_dsn) as checkpointer:
         await checkpointer.setup()
         app.state.checkpointer = checkpointer
         compile_graph(checkpointer)
@@ -36,7 +37,6 @@ app.include_router(chat_router)
 app.include_router(admin_router)
 app.include_router(web_data_router)
 app.include_router(terminal_router)
-app.include_router(mcp_router)
 
 
 @app.get("/health")

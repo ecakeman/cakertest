@@ -1,14 +1,14 @@
-# 可选依赖（Caker 本身用宿主机 uvicorn 启动，见 README）
+# Caker 本身用宿主机 uvicorn 启动（见 README）
 #
-# 本地跟写默认只需进程内 Chroma；一般不必启 compose：
-#   docker compose --profile optional up -d chroma
+# 本地开发默认需要 Postgres + pgvector（Checkpoint + MemPalace）：
+#   docker compose up -d postgres
 #
-# postgres / minio 为原生产向可选组件，profile optional
+# MinIO 仍为可选：
+#   docker compose --profile optional up -d minio
 
 services:
   postgres:
-    profiles: ["optional"]
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: agent
       POSTGRES_PASSWORD: agent
@@ -36,15 +36,6 @@ services:
     volumes:
       - miniodata:/data
 
-  chroma:
-    profiles: ["optional"]
-    image: chromadb/chroma:latest
-    ports:
-      - "8001:8000"
-    volumes:
-      - chromadata:/chroma/chroma
-
 volumes:
   pgdata:
   miniodata:
-  chromadata:

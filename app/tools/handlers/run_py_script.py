@@ -7,8 +7,8 @@ import sys
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.workspace import manager as workspace_manager
 from app.workspace.manager import WorkspaceError
 
@@ -80,7 +80,7 @@ def handle_run_py_script(args: dict, ctx: ToolContext) -> ToolCallResult:
     )
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="run_py_script",
     description="Run a Python script from the skills/ tree (skills/<name>/scripts/*.py).",
     input_schema=pydantic_input_schema(RunPyScriptArgs),

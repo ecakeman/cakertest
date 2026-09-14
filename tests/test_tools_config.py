@@ -1,4 +1,4 @@
-"""MCP LangChain adapter must receive graph session_id via RunnableConfig."""
+"""LangChain adapter must receive graph session_id via RunnableConfig."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from app.mcp.adapters.langchain import make_langchain_tool
-from app.mcp.context import context_from_runnable_config
-from app.mcp.registry import registry
+from app.tools.langchain_adapter import make_langchain_tool
+from app.tools.context import context_from_runnable_config
+from app.tools.registry import registry
 from app.tools.base import build_default_tools
 
 

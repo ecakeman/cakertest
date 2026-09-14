@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.mcp.registry import registry
-from app.mcp.types import ToolContext
+from app.tools.registry import registry
+from app.tools.types import ToolContext
 
 
 def test_all_registered_tools_have_object_schema():

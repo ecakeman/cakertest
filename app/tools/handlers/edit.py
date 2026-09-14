@@ -4,8 +4,8 @@ import json
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.workspace.io import patch_unique
 from app.workspace.manager import WorkspaceError
 
@@ -36,7 +36,7 @@ def handle_edit(args: dict, ctx: ToolContext) -> ToolCallResult:
     )
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="edit",
     description=(
         "Replace a unique string in a writable workspace file (data/, outputs/, or compose/)."

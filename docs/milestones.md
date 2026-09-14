@@ -20,7 +20,7 @@
 | [app/config.py](../app/config.py) | `pydantic-settings` 读 `.env`（`LLM_*`、`WORKSPACE_ROOT`、存储等） |
 | [app/__init__.py](../app/__init__.py) | 包初始化 |
 | [.env.example](../.env.example) | 环境变量模板（仅占位符；真实 `BASE_URL` / Key 只写在本地 `.env`） |
-| [docker-compose.yaml](../docker-compose.yaml) | 可选依赖（**M13 主要用 Chroma**；Postgres / MinIO 本地路线可不启） |
+| [docker-compose.yaml](../docker-compose.yaml) | 默认 Postgres + pgvector；MinIO 可选 |
 | [tests/test_m0_health.py](../tests/test_m0_health.py) | `/health` 冒烟测试 |
 
 **验证**：`curl -s http://127.0.0.1:8000/health` → `{"ok":true}`。
@@ -269,11 +269,11 @@ curl -s -X POST http://127.0.0.1:8000/api/v2/chat-graph \
 
 ---
 
-### M10 多轮历史（AsyncSqliteSaver）
+### M10 多轮历史（AsyncPostgresSaver）
 
 | 路径 | 说明 |
 |------|------|
-| [app/main.py](../app/main.py) | FastAPI `lifespan`：`AsyncSqliteSaver` + `setup()` + `compile_graph` |
+| [app/main.py](../app/main.py) | FastAPI `lifespan`：`AsyncPostgresSaver` + `setup()` + `compile_graph` |
 | [app/runtime/graph.py](../app/runtime/graph.py) | `start` 条件边；`compile_graph` / `get_graph` |
 | [app/runtime/routes.py](../app/runtime/routes.py) | `route_after_start` |
 | [app/runtime/nodes.py](../app/runtime/nodes.py) | `start_node` 按恢复后的 `messages` 设 `skip_inject_system` |
@@ -281,8 +281,8 @@ curl -s -X POST http://127.0.0.1:8000/api/v2/chat-graph \
 
 **行为要点**：
 
-- 检查点写入 `var/state.db`（`.gitignore`）；须 **`AsyncSqliteSaver`**，与 `ainvoke` 配套。
-- 每轮 API 仍传 `messages: []`；历史由 `thread_id` 从 SQLite 恢复；次轮起跳过 `inject_system`。
+- 检查点写入 PostgreSQL（`PG_DSN`，默认 `docker compose up -d postgres`）；须 **`AsyncPostgresSaver`**，与 `ainvoke` 配套。
+- 每轮 API 仍传 `messages: []`；历史由 `thread_id` 从 PostgreSQL 恢复；次轮起跳过 `inject_system`。
 
 **验证**：
 
@@ -362,23 +362,23 @@ uv run python -c "from app.runtime.graph import build_graph; g=build_graph(); pr
 
 | 路径 | 说明 |
 |------|------|
-| [app/mempalace/chroma_store.py](../app/mempalace/chroma_store.py) | `PersistentClient`（`CHROMA_PATH`）；`OpenAIEmbeddingFunction`；`add` / `search` |
+| [app/mempalace/chroma_store.py](../app/mempalace/chroma_store.py) | PostgreSQL + pgvector 表 `mempalace`；`add` / `search` / `delete_by_user` |
 | [app/mempalace/injector.py](../app/mempalace/injector.py) | `should_inject`、`build_bootstrap`（JSON `HumanMessage`） |
 | [app/mempalace/__init__.py](../app/mempalace/__init__.py) | 包初始化 |
-| [app/config.py](../app/config.py) | `embedding_*`、`chroma_path` |
+| [app/config.py](../app/config.py) | `embedding_*`、`pg_dsn` |
 | [.env.example](../.env.example) | `EMBEDDING_MODEL_NAME` / `EMBEDDING_BASE_URL` / `EMBEDDING_API_KEY` / `EMBEDDING_DIMENSIONS` |
-| [app/runtime/nodes.py](../app/runtime/nodes.py) | `mempalace_inject_node`；`end_node` 写入 Chroma |
+| [app/runtime/nodes.py](../app/runtime/nodes.py) | `mempalace_inject_node` |
 | [app/runtime/graph.py](../app/runtime/graph.py) | `inject_user` → `mempalace_inject` → `llm` |
 | [app/api/chat.py](../app/api/chat.py) | 请求头 `x-user-id` → `configurable.user_id`（`chat-graph` / `stream`） |
 | [tests/test_m13_mempalace.py](../tests/test_m13_mempalace.py) | 注入条件与节点单测 |
+| [tests/test_pgvector_mempalace.py](../tests/test_pgvector_mempalace.py) | pgvector 写入 / 召回 / 删除 |
 
 **行为要点**：
 
-- **写入**：每轮 `end_node` 对当前 `messages` 做 `summarize()`，以 UUID 为 id upsert 到 collection `mempalace`，元数据含 `session_id`、`user_id`。
-- **召回**：每轮用户句注入后、`llm` 前执行 `mempalace_inject`；按 `user_id` 过滤向量检索，命中则插入一条 `{"mempalace": true, "wakeup", "recall": [...]}` 的 `HumanMessage`（同轮不重复注入）。
-- **嵌入**：走 **OpenAI 兼容 Embedding API**（见 `.env` 的 `EMBEDDING_*`），**不**下载本地 `all-MiniLM-L6-v2`。若曾用默认嵌入建过库，首次切换会自动删旧 collection 重建。
-- **与 M10 区别**：M10 同 `session_id` 的多轮在 SQLite；M13 同 **`user_id`**、不同 `session_id` 可跨会话召回。
-- **可选**：`docker compose up -d chroma` 为独立 Chroma 服务（端口 8001）；当前实现默认 **进程内** `PersistentClient` 写 `./var/chroma`，可不启 compose。
+- **写入**：工具 `chroma_in`（及显式记忆技能）将文本 embedding 后写入表 `mempalace`，元数据含 `session_id`、`user_id`。
+- **召回**：每轮用户句注入后、`llm` 前执行 `mempalace_inject`（`MEMPALACE_AUTO_INJECT`）；按 `user_id` 过滤向量检索，命中则插入一条 `{"mempalace": true, "wakeup", "recall": [...]}` 的 `HumanMessage`（同轮不重复注入）。
+- **嵌入**：走 **OpenAI 兼容 Embedding API**（见 `.env` 的 `EMBEDDING_*`），向量与 Checkpoint 共用 PostgreSQL。
+- **与 M10 区别**：M10 同 `session_id` 的多轮在 Checkpoint；M13 同 **`user_id`**、不同 `session_id` 可跨会话召回。
 
 **与指南差异**：指南称 M15；本仓库 README 序号为 M13。未实现 L0 结构化 JSON 文件（指南可选练手项）。
 

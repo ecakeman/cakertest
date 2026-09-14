@@ -1,6 +1,6 @@
 ---
 name: memory-remember
-description: Stores user-provided facts in long-term vector memory (Chroma) scoped by user_id. Use when the user explicitly asks to remember something for future sessions.
+description: Stores user-provided facts in long-term vector memory (PostgreSQL + pgvector) scoped by user_id. Use when the user explicitly asks to remember something for future sessions.
 allowed-tools: chroma_in call_skill
 ---
 

@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from app.mcp.registry import registry
-from app.mcp.types import ToolContext
+from app.tools.registry import registry
+from app.tools.types import ToolContext
 from app.workspace.manager import WorkspaceManager
 
 

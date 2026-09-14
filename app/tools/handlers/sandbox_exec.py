@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 from app.execution.exec_runner import ExecError
 from app.execution.exec_pending import describe_attach_target, propose_exec
 from app.execution.sandbox_context import session_workspace_host
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 
 
 class SandboxExecArgs(BaseModel):
@@ -53,7 +53,7 @@ def handle_sandbox_exec(args: dict, ctx: ToolContext) -> ToolCallResult:
     return ToolCallResult(text=json.dumps(payload, ensure_ascii=False))
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="sandbox_exec",
     description=(
         "Propose running a shell command inside the sandbox Docker environment. "

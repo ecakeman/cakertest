@@ -6,8 +6,8 @@ from unittest.mock import patch
 import pytest
 
 from app.execution.exec_pending import approve_and_run, propose_exec, reject_pending
-from app.mcp.registry import registry
-from app.mcp.types import ToolContext
+from app.tools.registry import registry
+from app.tools.types import ToolContext
 from app.workspace.manager import WorkspaceManager
 
 

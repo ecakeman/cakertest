@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -12,7 +12,7 @@ class ToolContext:
 
 
 @dataclass(frozen=True)
-class McpToolDefinition:
+class ToolDefinition:
     name: str
     description: str
     input_schema: dict[str, Any]
@@ -23,9 +23,6 @@ class McpToolDefinition:
 class ToolCallResult:
     text: str
     is_error: bool = False
-
-    def to_mcp_content(self) -> list[dict[str, Any]]:
-        return [{"type": "text", "text": self.text}]
 
 
 ToolHandler = Callable[[dict[str, Any], ToolContext], ToolCallResult | Awaitable[ToolCallResult]]

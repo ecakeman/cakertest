@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.mcp.handlers import (
+from app.tools.handlers import (
     call_skill,
     chroma_in,
     chroma_out,

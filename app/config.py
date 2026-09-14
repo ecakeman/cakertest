@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,12 +26,13 @@ class Settings(BaseSettings):
         return name
 
     workspace_root: str = Field(default="./var/workspace")
-    # 本地路线可留空；原 Pipeline/PG 持久化不在跟写范围
-    pg_dsn: str = ""
-    # 本地路线可留空；M10 用 SqliteSaver（var/state.db），不用 S3
+    # LangGraph Checkpoint（AsyncPostgresSaver）；本地开发默认见 .env.example / docker compose
+    pg_dsn: str = Field(
+        default="postgresql://agent:agent@127.0.0.1:5432/agent_skills",
+    )
+    # 本地路线可留空；对象存储不在跟写范围
     s3_endpoint: str = Field(default="http://localhost:9000")
     s3_bucket: str = Field(default="agent-skills-state")
-    chroma_path: str = Field(default="./var/chroma")  # M15 MemPalace
     upload_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1)
 
     # Qwen3.5-397B-A17B 原生 262K；官方建议部署上下文至少 128K 以保留长程推理能力。
@@ -51,6 +52,17 @@ class Settings(BaseSettings):
         default="docker.m.daocloud.io",
         description="Empty to disable; prepended for venue image pull only",
     )
+
+    @field_validator("pg_dsn")
+    @classmethod
+    def pg_dsn_required(cls, v: str) -> str:
+        dsn = (v or "").strip()
+        if not dsn:
+            raise ValueError(
+                "PG_DSN is required (LangGraph AsyncPostgresSaver). "
+                "Start postgres: docker compose up -d postgres"
+            )
+        return dsn
 
 
 settings = Settings()

@@ -4,8 +4,8 @@ import json
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.skills.manager import skills_manager
 
 
@@ -31,7 +31,7 @@ def handle_call_skill(args: dict, ctx: ToolContext) -> ToolCallResult:
     return ToolCallResult(text=json.dumps(payload, ensure_ascii=False))
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="call_skill",
     description="Load a skill's operating instructions (SKILL.md body). Does not execute code.",
     input_schema=pydantic_input_schema(CallSkillArgs),

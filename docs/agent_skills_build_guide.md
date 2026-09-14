@@ -8,10 +8,10 @@
 
 | 能力 | 本地路线 | 原报告 / 生产向 |
 |------|----------|-----------------|
-| 多轮历史 | M10：`AsyncSqliteSaver`（`var/state.db`）+ `thread_id` | S3 / PG checkpoint、`FileStateStore` |
+| 多轮历史 | M10：`AsyncPostgresSaver`（`PG_DSN`）+ `thread_id` | 原报告还可有 S3 / `FileStateStore`；本仓库对齐 PG checkpoint |
 | SSE 流式 | M4：请求内 `astream_events`（单连接） | M12 `PipelineService` + PG chunk 日志 |
 | 断线续传 | **不做** | M13 游标 `after_seq` 等 |
-| 向量记忆 | M15：Chroma（`CHROMA_PATH` 或 compose） | 同左，可换托管向量库 |
+| 向量记忆 | M15：PostgreSQL + pgvector（`PG_DSN`） | 与 Checkpoint 同一库 |
 
 里程碑 **M0–M11、M14–M15** 跟完即可跑通本地 Agent；**不跟**原指南中的 Pipeline / 游标两节（下文已删）。
 
@@ -28,7 +28,7 @@
 | 图执行 API | — | FastAPI 用 **`await GRAPH.ainvoke` / `astream_events`**（异步） |
 | M7 工作区 | `skills/` symlink「可选」 | M7 可不做；**M9 起在 caker 中为必需**（见 M9） |
 | M8 系统提示 | 纯英文 Agent / 硬编码在 `nodes.py` | 仓库根 **`system_prompt.md`** + `SkillManager.render_system_prompt()`；`{skills_meta}` 动态注入；正文仅面向 LLM（维护说明见 README） |
-| M10 检查点 | 文中示例同步 `SqliteSaver` | **`AsyncSqliteSaver`**（`var/state.db`）+ FastAPI `lifespan`；须与 **`ainvoke`** 配套（见 M10） |
+| M10 检查点 | 文中示例同步 `SqliteSaver` / 本地曾用 SQLite | **`AsyncPostgresSaver`**（`PG_DSN`）+ FastAPI `lifespan`；须与 **`ainvoke`** 配套（见 M10） |
 
 ---
 
@@ -60,10 +60,10 @@
 | Web | FastAPI + uvicorn | 中间件、SSE 都靠它 |
 | Agent 编排 | LangGraph (`langgraph`) | StateGraph、MessagesState、ToolNode |
 | LLM 客户端 | `langchain-openai`（OpenAI 兼容） | base_url 可指向自部署网关 |
-| 检查点 | LangGraph **`AsyncSqliteSaver`**（M10，`var/state.db`） | 本地文件持久化；须与 **`ainvoke`** 配套（见 M10） |
+| 检查点 | LangGraph **`AsyncPostgresSaver`**（M10，`PG_DSN`） | PostgreSQL；须与 **`ainvoke`** 配套（见 M10） |
 | 关系库 | PostgreSQL 14+ | **可选**；本地路线不用（compose 中可不开） |
 | 对象存储 | S3 / MinIO | **可选**；本地路线不用 |
-| 向量库 | ChromaDB | MemPalace（M15）；可用 `CHROMA_PATH` 嵌入式，不必起 PG |
+| 向量库 | PostgreSQL + pgvector | MemPalace（M15）；与 Checkpoint 共用 `PG_DSN` |
 | 子进程脚本 | Python 3.11 + Node.js 20 | `RunPyScript`、`RunJsTsScript` |
 
 环境变量（与仓库 [`.env.example`](../.env.example) 一致，OpenAI **兼容**网关通用）：
@@ -97,7 +97,7 @@ caker/                            # 仓库根 = 你 clone 下来的目录
 ├── docker-compose.yaml           # 本地默认只需 Chroma（PG/MinIO 可选）
 ├── README.md
 ├── system_prompt.md              # M8+：系统提示词模板（{skills_meta} 占位）
-├── var/                          # M10 起：state.db（.gitignore）
+├── var/                          # 工作区等；Checkpoint 在 PostgreSQL
 ├── app/
 │   ├── __init__.py
 │   ├── main.py                   # M0：FastAPI + /health
@@ -110,7 +110,7 @@ caker/                            # 仓库根 = 你 clone 下来的目录
 │   │   ├── state.py              # M3
 │   │   ├── nodes.py              # M3+
 │   │   ├── routes.py             # M6+（M10 增 route_after_start）
-│   │   ├── graph.py              # M3+（M10 接 AsyncSqliteSaver）
+│   │   ├── graph.py              # M3+（M10 接 AsyncPostgresSaver）
 │   │   ├── llm.py                # M2
 │   │   └── sse.py                # M4
 │   ├── tools/
@@ -129,7 +129,7 @@ caker/                            # 仓库根 = 你 clone 下来的目录
 │   │   ├── __init__.py
 │   │   └── manager.py
 │   ├── pipeline/                 # 原报告 §6；本地路线 **不创建**（已删 M12–M13 跟写）
-│   ├── state_store/              # 原报告 §7；本地 M10 用 AsyncSqliteSaver，**不创建**
+│   ├── state_store/              # 原报告 §7；本仓库用 AsyncPostgresSaver，**不创建**
 │   ├── summary/                  # M14
 │   │   └── handler.py
 │   └── mempalace/               # M15
@@ -988,24 +988,24 @@ curl -s -X POST http://127.0.0.1:8000/api/v2/chat-graph \
 
 ---
 
-## M10 历史持久化（AsyncSqliteSaver）+ `skip_inject_system`
+## M10 历史持久化（AsyncPostgresSaver）+ `skip_inject_system`
 
 ### 目标
-- 同一 `session_id` 的多轮对话能延续上下文（LangGraph 检查点写入 `var/state.db`）。
+- 同一 `session_id` 的多轮对话能延续上下文（LangGraph 检查点写入 PostgreSQL）。
 - 有历史时 `skip_inject_system=True`，**跳过** `inject_system`，仍走 `inject_user` 写入本轮 `input`。
-- **本地路线**：`AsyncSqliteSaver` 零 PG/S3；**重启 uvicorn 后同 `thread_id` 会话仍在**（SQLite 文件在 `var/`，已 `.gitignore`）。
+- **当前路线**：`AsyncPostgresSaver`；先 `docker compose up -d postgres`；**重启 uvicorn 后同 `thread_id` 会话仍在**。
 
 ### 前置
-M9。依赖：`langgraph-checkpoint-sqlite`、`aiosqlite`（或 `uv sync`）。
+M9。依赖：`langgraph-checkpoint-postgres`、`psycopg[binary,pool]`（或 `uv sync`）。
 
-**caker 现状（M8–M9 已落地时）**：`app/runtime/graph.py` **未**接 checkpointer（`GRAPH = build_graph().compile()`），以便 `ainvoke` / `astream_events` 不因同步 `SqliteSaver` 报错。做 M10 时**一次性**接入 `AsyncSqliteSaver` + `route_after_start`，不要只加 checkpointer 不改边。
+**说明**：M10 已接入 `AsyncPostgresSaver`（见 `app/main.py` lifespan）+ `route_after_start`；勿再切回 SQLite 作为主检查点。
 
 ### 文件清单与分工
 
 | 文件 | 分工 |
 |------|------|
-| `pyproject.toml` | `[我写]` `langgraph-checkpoint-sqlite`、`aiosqlite` |
-| `app/runtime/graph.py` | `[一起写]` `compile(checkpointer=AsyncSqliteSaver)`；`build_graph()` 只 `return g` |
+| `pyproject.toml` | `[我写]` `langgraph-checkpoint-postgres`、`psycopg[binary,pool]` |
+| `app/runtime/graph.py` | `[一起写]` `compile(checkpointer=AsyncPostgresSaver)`；`build_graph()` 只 `return g` |
 | `app/runtime/nodes.py` `start_node` | `[你手敲]` 看 `state["messages"]` 是否已有内容设 `skip_inject_system` |
 | `app/runtime/routes.py` `route_after_start` | `[你手敲]` 新建条件路由 |
 | `app/runtime/graph.py` | `[一起写]` `start` 条件边，替换 `start → inject_system` 固定边 |
@@ -1039,7 +1039,7 @@ START → start ──route_after_start──┬→ inject_system → inject_use
 ### `inject_user_node` 与检查点（必读）
 
 - 每轮 API 仍传 `messages: []` 与本轮 `input`（见下 `inputs`）；**不要**在 `ainvoke` 里手工拼接历史。
-- **`AsyncSqliteSaver`** 按 `configurable.thread_id` 恢复上一轮结束时的 `messages`（含 System / Human / AI / Tool）。
+- **`AsyncPostgresSaver`** 按 `configurable.thread_id` 恢复上一轮结束时的 `messages`（含 System / Human / AI / Tool）。
 - `start_node` 仅根据「恢复后 `messages` 是否非空」设置 `skip_inject_system`。
 - **`inject_user_node` 逻辑不用改**：仍为 `HumanMessage(content=state["input"])`。`GraphState.messages` 使用 `add_messages` reducer，会把**本轮**用户句 **追加** 到已恢复历史之后。
 - 常见误区：在 `start_node` 里把历史 messages 再 `return` 一遍 → 与 reducer 重复追加；或第二轮仍走 `inject_system` → 重复 SystemMessage。
@@ -1048,14 +1048,14 @@ START → start ──route_after_start──┬→ inject_system → inject_use
 
 ```python
 # pyproject.toml dependencies  [我写]
-"langgraph-checkpoint-sqlite>=2.0.0",
-"aiosqlite>=0.20",
+"langgraph-checkpoint-postgres>=2.0.0",
+"psycopg[binary,pool]>=3.2.0",
 ```
 
 ```python
 # app/runtime/graph.py  [一起写]（caker + FastAPI 异步）
 from pathlib import Path
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 def build_graph():
     g = StateGraph(GraphState)
@@ -1063,21 +1063,21 @@ def build_graph():
     return g
 
 Path("var").mkdir(parents=True, exist_ok=True)
-# AsyncSqliteSaver.from_conn_string 也是 async context manager；
+# AsyncPostgresSaver.from_conn_string 也是 async context manager；
 # 模块级需在 lifespan 或启动钩子里 await __aenter__，或文档化等价写法
 GRAPH = ...  # build_graph().compile(checkpointer=checkpointer)
 ```
 
-**AsyncSqliteSaver 导入（caker 须用异步版）**
+**AsyncPostgresSaver 导入**
 
 | 项 | 值 |
 |----|-----|
-| pip | `langgraph-checkpoint-sqlite`、`aiosqlite` |
-| **正确** | `from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver` |
-| **勿用** | 同步 `SqliteSaver` + `await GRAPH.ainvoke` → `does not support async methods` |
+| pip | `langgraph-checkpoint-postgres`、`psycopg[binary,pool]` |
+| **正确** | `from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver` |
+| **勿用** | 同步 Saver + `await GRAPH.ainvoke`；或再引入 SQLite 作为第二套主检查点 |
 | **错误** | `from langgraph_checkpoint_sqlite import ...` → `ModuleNotFoundError` |
 
-自检：`uv run python -c "from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver; print(AsyncSqliteSaver)"`
+自检：`uv run python -c "from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver; print(AsyncPostgresSaver)"`
 
 ```python
 # app/runtime/nodes.py start_node  [你手敲]
@@ -1123,13 +1123,13 @@ curl -s -X POST http://127.0.0.1:8000/api/v2/chat-graph \
   -H 'content-type: application/json' \
   -d "{\"message\":\"我叫什么？\",\"session_id\":\"$SID\"}"
 ```
-预期：第二条 `reply` 能答出「张三」。**重启 uvicorn 后**对同一 `$SID` 再发「我叫什么？」仍应能答出（检查点在 `var/state.db`）。
+预期：第二条 `reply` 能答出「张三」。**重启 uvicorn 后**对同一 `$SID` 再发「我叫什么？」仍应能答出（检查点在 PostgreSQL）。
 
 ### 易错点
 - `thread_id` 给检查点；`session_id` 给 Workspace 工具（M7）——本地可同值，语义分开。
 - 只加了 `checkpointer` 却未改 `start` 条件边 → 每轮仍 `inject_system`，与 README「跳过重复 SystemMessage」不一致。
 - 未 `mkdir var/` 时 SQLite 可能 `unable to open database file`。
-- 同步 `SqliteSaver` 与 `await ainvoke` 不兼容；必须用 **`AsyncSqliteSaver`**。
+- 须配置 `PG_DSN` 并启动 Postgres；必须用 **`AsyncPostgresSaver`**。
 - `from_conn_string` 是 context manager，不能直接把 manager 对象传给 `compile()`。
 - 忘记 `compile(checkpointer=...)` 时，第二轮 `messages` 仍为空。
 - `add_messages` 是追加：每轮只传本轮 `input`，勿在 `ainvoke` 里重复塞全量历史。
@@ -1495,7 +1495,7 @@ dev-dependencies = ["pytest>=8", "httpx>=0.27"]
 | M7 | Workspace 沙箱 | §5 / §9.4 |
 | M8 | call_skill 加载说明 | §4 / §9.2 |
 | M9 | RunPyScript 子进程 | §4 / §5 |
-| M10 | 多轮历史（AsyncSqliteSaver / `var/state.db`） | §3 节点 1 / §7（子集） |
+| M10 | 多轮历史（AsyncPostgresSaver / `PG_DSN`） | §3 节点 1 / §7（子集） |
 | M11 | result_set 终态 | §3 节点 6,8 |
 | M14 | summary 压缩 | §3 节点 7 |
 | M15 | MemPalace 召回 | §3 节点 3 / §9.5 |

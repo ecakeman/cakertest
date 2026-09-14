@@ -78,9 +78,9 @@ var/workspace/<user_id>/<session_id>/
 | 内容 | 位置 | 说明 |
 |------|------|------|
 | 对话列表标题、设置 | `var/web/` | 换浏览器、清缓存可能丢列表；连同一后端可恢复服务端数据 |
-| 多轮聊天内容 | `var/state.db` | 同一 `session_id` 续聊依赖检查点 |
+| 多轮聊天内容 | PostgreSQL（`PG_DSN`） | 同一 `session_id` 续聊依赖检查点 |
 | 上传文件、Agent 产出 | `var/workspace/...` | 删会话时应一并清理（管理 API / 删对话） |
-| 跨会话语义记忆 | `var/chroma/` | 需配置 `EMBEDDING_*`；同 User ID 可召回 |
+| 跨会话语义记忆 | PostgreSQL + pgvector（`PG_DSN`） | 需配置 `EMBEDDING_*`；同 User ID 可召回 |
 
 ## 6. Agent 能做什么（用户视角）
 
@@ -89,7 +89,7 @@ var/workspace/<user_id>/<session_id>/
 - 长对话时自动**压缩上下文**（保留系统提示与当前轮），减少超长报错。
 - 流式模式下可见工具执行、压缩等**状态提示**（非最终正文）。
 
-具体工具列表以运行时的系统提示与 MCP 注册为准。
+具体工具列表以运行时的系统提示与工具注册为准。
 
 ## 7. 常见问题
 

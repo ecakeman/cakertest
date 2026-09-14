@@ -97,7 +97,7 @@ async def delete_user(user_id: str, request: Request) -> dict:
     try:
         chroma_store.delete_by_user(uid)
     except Exception as e:
-        raise HTTPException(status_code=500, detail="failed to delete chroma memory") from e
+        raise HTTPException(status_code=500, detail="failed to delete vector memory") from e
 
     try:
         manager.remove_user_workspace(uid)

@@ -18,7 +18,7 @@ Caker 本体在**宿主机**运行（`uvicorn`），不进 Docker。V2 提供 **
 | `sandbox_exec` | 提议容器内命令 → 沙箱 UI 弹窗确认 → `approve` 后执行 |
 | `run_py_script` | 宿主机 `skills/**/scripts/*.py`（与容器分离） |
 
-**统一 I/O 层**：MCP 工具与沙箱编辑器 HTTP API 共用 `app/workspace/paths.py`（路径规范化与 ACL）和 `app/workspace/io.py`（读写、512KB 上限）；Agent `write` 与编辑器 PUT 写入同一磁盘路径。
+**统一 I/O 层**：Agent 工具与沙箱编辑器 HTTP API 共用 `app/workspace/paths.py`（路径规范化与 ACL）和 `app/workspace/io.py`（读写、512KB 上限）；Agent `write` 与编辑器 PUT 写入同一磁盘路径。
 
 沙箱对话请求带 `x-sandbox: 1`，系统提示词注入 `[SANDBOX_CONTEXT]`（compose 是否 up、attach 目标）。
 
@@ -62,7 +62,7 @@ Caker 本体在**宿主机**运行（`uvicorn`），不进 Docker。V2 提供 **
 
 ## 已移除（V1）
 
-- `runtime.yaml` / `exec_*` MCP / `runtime/approve`
+- `runtime.yaml` / `exec_*` 工具 / `runtime/approve`
 - 每轮对话销毁沙箱、镜像 allowlist
 - Agent 直接读取 Web 终端输出
 
@@ -75,7 +75,7 @@ Caker 本体在**宿主机**运行（`uvicorn`），不进 Docker。V2 提供 **
 - `app/execution/exec_runner.py` — 一次性容器命令
 - `app/execution/exec_pending.py` — 待确认队列
 - `app/execution/sandbox_context.py` — 沙箱上下文注入
-- `app/mcp/handlers/sandbox_exec.py` — Agent 提议执行
+- `app/tools/handlers/sandbox_exec.py` — Agent 提议执行
 - `web/js/chat-ui.js` — 主站/沙箱共享对话 UI
 - `web/js/composer-file-ref.js` — 拖放工作区路径到对话
 - `web/js/workspace-context-menu.js` — 文件树右键菜单

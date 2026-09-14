@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate MCP tools and Agent Skills compliance."""
+"""Validate tools and Agent Skills compliance."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from app.mcp.registry import registry  # noqa: E402
+from app.tools.registry import registry  # noqa: E402
 from app.skills.manager import SkillValidationError, skills_manager, validate_skill_md  # noqa: E402
 
 
 def main() -> int:
     errors: list[str] = []
 
-    print("MCP tools:")
+    print("Tools:")
     for t in registry.list_tools_public(include_result_set=True):
         schema = t["inputSchema"]
         if schema.get("type") != "object":

@@ -24,7 +24,6 @@
 |------|------|
 | `var/workspace/<user>/<session>/` | 会话沙箱，`data/uploads/` 放上传 |
 | `var/web/` | 用户、会话列表、Web 设置 |
-| `var/state.db` | 多轮对话检查点 |
-| `var/chroma/` | 跨会话语义记忆（可选） |
+| PostgreSQL（`PG_DSN`） | 多轮对话检查点（LangGraph AsyncPostgresSaver）+ MemPalace 向量（pgvector） |
 
 `WORKSPACE_ROOT` 默认 `./var/workspace`（`.env`）。

@@ -127,7 +127,7 @@ class SkillManager:
         tools_meta: str | None = None,
         sandbox_context: str | None = None,
     ) -> str:
-        from app.mcp.registry import registry
+        from app.tools.registry import registry
 
         if skills_meta is None:
             skills_meta = json.dumps(self.list_meta(), ensure_ascii=False, indent=2)

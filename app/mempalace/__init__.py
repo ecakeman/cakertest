@@ -1,1 +1,1 @@
-"""MemPalace long-term memory (M13)."""
+"""MemPalace long-term memory：PostgreSQL + pgvector。"""

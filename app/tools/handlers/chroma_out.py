@@ -4,8 +4,8 @@ import json
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.mempalace.chroma_store import search
 
 
@@ -31,10 +31,10 @@ def handle_chroma_out(args: dict, ctx: ToolContext) -> ToolCallResult:
         )
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="chroma_out",
     description=(
-        "Searches the user's long-term vector memory (Chroma) by semantic similarity. "
+        "Searches the user's long-term vector memory (PostgreSQL + pgvector) by semantic similarity. "
         "Use when the user asks to recall something they asked to remember earlier."
     ),
     input_schema=pydantic_input_schema(ChromaOutArgs),

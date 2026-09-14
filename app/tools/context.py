@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from langchain_core.runnables.config import RunnableConfig, var_child_runnable_config
 
-from app.mcp.types import ToolContext
+from app.tools.types import ToolContext
 
 
 def context_from_runnable_config(

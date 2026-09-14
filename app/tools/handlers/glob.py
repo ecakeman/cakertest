@@ -5,8 +5,8 @@ import json
 
 from pydantic import BaseModel, Field
 
-from app.mcp.schema import pydantic_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.schema import pydantic_input_schema
+from app.tools.types import ToolDefinition, ToolCallResult, ToolContext, ToolHandler
 from app.workspace import manager as workspace_manager
 from app.workspace.manager import WorkspaceError
 from app.workspace.paths import normalize_glob_pattern
@@ -47,7 +47,7 @@ def handle_glob(args: dict, ctx: ToolContext) -> ToolCallResult:
     )
 
 
-DEFINITION = McpToolDefinition(
+DEFINITION = ToolDefinition(
     name="glob",
     description="List files in the session workspace matching a glob pattern.",
     input_schema=pydantic_input_schema(GlobArgs),

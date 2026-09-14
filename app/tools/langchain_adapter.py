@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field, create_model
 
-from app.mcp.context import context_from_runnable_config
-from typing import TYPE_CHECKING
-
-from app.mcp.types import McpToolDefinition
+from app.tools.context import context_from_runnable_config
+from app.tools.types import ToolDefinition
 
 if TYPE_CHECKING:
-    from app.mcp.registry import ToolRegistry
+    from app.tools.registry import ToolRegistry
 
 TOOL_ERROR_PREFIX = "[TOOL_ERROR]"
 
@@ -25,7 +23,7 @@ def _default_from_schema(key: str, spec: dict[str, Any], required: set[str]) -> 
     return None
 
 
-def _args_model_from_schema(definition: McpToolDefinition) -> type[BaseModel]:
+def _args_model_from_schema(definition: ToolDefinition) -> type[BaseModel]:
     props = definition.input_schema.get("properties") or {}
     required = set(definition.input_schema.get("required") or [])
     fields: dict[str, Any] = {}
@@ -65,7 +63,7 @@ def _format_tool_result(text: str, *, is_error: bool) -> str:
     return text
 
 
-def make_langchain_tool(registry: "ToolRegistry", definition: McpToolDefinition) -> BaseTool:
+def make_langchain_tool(registry: "ToolRegistry", definition: ToolDefinition) -> BaseTool:
     schema_cls = _args_model_from_schema(definition)
     tool_name = definition.name
     tool_desc = definition.description

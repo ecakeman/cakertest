@@ -7,9 +7,9 @@ from typing import Any
 
 from langchain_core.tools import BaseTool
 
-from app.mcp.handlers import ALL_HANDLERS
-from app.mcp.schema import validate_input_schema
-from app.mcp.types import McpToolDefinition, ToolCallResult, ToolContext, ToolHandler
+from app.tools.handlers import ALL_HANDLERS
+from app.tools.schema import validate_input_schema
+from app.tools.types import ToolCallResult, ToolContext, ToolDefinition, ToolHandler
 
 
 def _normalize_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -19,15 +19,15 @@ def _normalize_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
 
 class ToolRegistry:
     def __init__(self) -> None:
-        self._defs: dict[str, McpToolDefinition] = {}
+        self._defs: dict[str, ToolDefinition] = {}
         self._handlers: dict[str, ToolHandler] = {}
 
-    def register(self, definition: McpToolDefinition, handler: ToolHandler) -> None:
+    def register(self, definition: ToolDefinition, handler: ToolHandler) -> None:
         validate_input_schema(definition.name, definition.input_schema)
         self._defs[definition.name] = definition
         self._handlers[definition.name] = handler
 
-    def list_definitions(self, *, include_result_set: bool = True) -> list[McpToolDefinition]:
+    def list_definitions(self, *, include_result_set: bool = True) -> list[ToolDefinition]:
         names = self._ordered_names(include_result_set=include_result_set)
         return [self._defs[n] for n in names]
 
@@ -85,7 +85,7 @@ class ToolRegistry:
         )
 
     def to_langchain_tools(self, *, include_result_set: bool = False) -> list[BaseTool]:
-        from app.mcp.adapters.langchain import make_langchain_tool
+        from app.tools.langchain_adapter import make_langchain_tool
 
         tools: list[BaseTool] = []
         for name in self._ordered_names(include_result_set=include_result_set):

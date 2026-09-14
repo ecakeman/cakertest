@@ -18,7 +18,7 @@ Caker 是跑在本机的 **Agent Skills 助手**：浏览器里对话，Agent �
 
 - **用户与会话分层** — 每 User 独占一套向量记忆（`user_id` 隔离，可选 MemPalace），下挂多个独立会话（各有工作区与聊天记录）；Web 侧栏切换用户、管理对话与工作区，无需手改配置  
 - **会话即沙箱** — 上传路径与 Agent 工具路径一致，避免「侧栏有文件、模型读不到」  
-- **图 + 工具 + 技能分层** — 流程在 LangGraph，原子能力在 MCP 工具，业务说明在 `skills/`  
+- **图 + 工具 + 技能分层** — 流程在 LangGraph，原子能力在工具，业务说明在 `skills/`  
 - **薄 Web、厚服务端** — 浏览器只聊天和上传；Agent 与存储全在本机进程  
 - **本地开箱** — 一条 `uvicorn` + `.env` 配 LLM 即可用，不绑特定云厂商  
 - **执行环境工作台（CEER V2）** — 沙箱页 + Web 终端（`docker exec`）；compose 由用户在终端自备（见 [execution-runtime-v2.md](docs/execution-runtime-v2.md)）  
@@ -30,7 +30,8 @@ Caker 是跑在本机的 **Agent Skills 助手**：浏览器里对话，Agent �
 ```bash
 git clone https://github.com/ecakeman/caker.git
 cd caker
-cp .env.example .env   # 填写 LLM_*
+cp .env.example .env   # 填写 LLM_* 与 PG_DSN
+docker compose up -d postgres
 pip install -e .
 uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
